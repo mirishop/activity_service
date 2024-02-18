@@ -1,14 +1,16 @@
 package com.hh.mirishop.activity.post.service;
 
+import com.hh.mirishop.activity.client.NewsfeedFeignClient;
+import com.hh.mirishop.activity.client.UserFeignClient;
+import com.hh.mirishop.activity.client.dto.NewsFeedCreate;
+import com.hh.mirishop.activity.common.exception.ErrorCode;
+import com.hh.mirishop.activity.common.exception.PostException;
 import com.hh.mirishop.activity.like.domain.LikeType;
 import com.hh.mirishop.activity.like.repository.LikeRepository;
 import com.hh.mirishop.activity.post.dto.PostRequest;
 import com.hh.mirishop.activity.post.dto.PostResponse;
-import com.hh.mirishop.activity.post.repository.PostRepository;
-import com.hh.mirishop.activity.client.UserFeignClient;
-import com.hh.mirishop.activity.common.exception.ErrorCode;
-import com.hh.mirishop.activity.common.exception.PostException;
 import com.hh.mirishop.activity.post.entity.Post;
+import com.hh.mirishop.activity.post.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.annotations.SoftDelete;
 import org.springframework.data.domain.Page;
@@ -25,6 +27,7 @@ public class PostServiceImpl implements PostService {
     private final PostRepository postRepository;
     private final LikeRepository likeRepository;
     private final UserFeignClient userFeignClient;
+    private final NewsfeedFeignClient newsfeedFeignClient;
 
     @Override
     @Transactional
@@ -34,7 +37,20 @@ public class PostServiceImpl implements PostService {
         Post post = new Post(postRequest.getTitle(), postRequest.getContent(), currentMemberNumber);
         postRepository.save(post);
 
-        return post.getPostId();
+        Long postId = post.getPostId();
+
+        NewsFeedCreate newsfeedCreate = NewsFeedCreate.builder()
+                .memberNumber(currentMemberNumber)
+                .newsfeedType("POST")
+                .activityId(postId)
+                .targetPostId(postId)
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
+                .build();
+
+        newsfeedFeignClient.createNewsfeed(newsfeedCreate);
+
+        return postId;
     }
 
     @Override
@@ -66,6 +82,17 @@ public class PostServiceImpl implements PostService {
 
         post.update(postRequest.getTitle(), postRequest.getContent());
         postRepository.save(post);
+
+        NewsFeedCreate newsfeedCreate = NewsFeedCreate.builder()
+                .memberNumber(currentMemberNumber)
+                .newsfeedType("POST")
+                .activityId(postId)
+                .targetPostId(postId)
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
+                .build();
+
+        newsfeedFeignClient.createNewsfeed(newsfeedCreate);
     }
 
     @Override
