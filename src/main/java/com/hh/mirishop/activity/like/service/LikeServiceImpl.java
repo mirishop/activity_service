@@ -1,12 +1,15 @@
 package com.hh.mirishop.activity.like.service;
 
-import com.hh.mirishop.activity.like.domain.LikeType;
+import com.hh.mirishop.activity.client.NewsfeedFeignClient;
 import com.hh.mirishop.activity.client.UserFeignClient;
+import com.hh.mirishop.activity.client.dto.NewsFeedCreate;
+import com.hh.mirishop.activity.client.dto.NewsFeedDelete;
 import com.hh.mirishop.activity.comment.repository.CommentRepository;
 import com.hh.mirishop.activity.common.exception.CommentException;
 import com.hh.mirishop.activity.common.exception.ErrorCode;
 import com.hh.mirishop.activity.common.exception.LikeException;
 import com.hh.mirishop.activity.common.exception.PostException;
+import com.hh.mirishop.activity.like.domain.LikeType;
 import com.hh.mirishop.activity.like.entity.Like;
 import com.hh.mirishop.activity.like.repository.LikeRepository;
 import com.hh.mirishop.activity.post.repository.PostRepository;
@@ -24,6 +27,7 @@ public class LikeServiceImpl implements LikeService {
     private final CommentRepository commentRepository;
     private final LikeRepository likeRepository;
     private final UserFeignClient userFeignClient;
+    private final NewsfeedFeignClient newsfeedFeignClient;
 
     @Override
     @Transactional
@@ -35,9 +39,14 @@ public class LikeServiceImpl implements LikeService {
             throw new LikeException(ErrorCode.ALREADY_LIKE);
         }
 
-        Like like = likeRepository.save(new Like(currentMemberNumber, postId, LikeType.POST));
-        // newsFeedService.createActivityForLike(like);
-        // TODO: newsfeed 서비스에도 등록해야함
+        Like like = Like.builder()
+                .memberNumber(currentMemberNumber)
+                .likeType(LikeType.POST)
+                .itemId(postId)
+                .build();
+
+        likeRepository.save(like);
+        createNewsFeedForLike(like, postId);
     }
 
     @Override
@@ -45,16 +54,17 @@ public class LikeServiceImpl implements LikeService {
     public void unlikePost(Long postId, Long currentMemberNumber) {
         userFeignClient.findMemberByNumber(currentMemberNumber);
         findPost(postId);
-        Optional<Like> likeOpt = likeRepository.findByItemIdAndLikeTypeAndMemberNumber(postId, LikeType.POST,
+
+        Optional<Like> likeOptional = likeRepository.findByItemIdAndLikeTypeAndMemberNumber(postId, LikeType.POST,
                 currentMemberNumber);
 
-        if (likeOpt.isEmpty()) {
+        if (likeOptional.isEmpty()) {
             throw new LikeException(ErrorCode.NOT_LIKE);
         }
-        Like like = likeOpt.get();
+
+        Like like = likeOptional.get();
         likeRepository.delete(like);
-        // newsFeedService.deleteActivityForUnlike(like);
-        // TODO: newsfeed 서비스에도 등록해야함
+        deleteNewsFeedForLike(like);
     }
 
     @Override
@@ -66,9 +76,15 @@ public class LikeServiceImpl implements LikeService {
         if (isAlreadyCommentLiked(commentId, currentMemberNumber)) {
             throw new LikeException(ErrorCode.ALREADY_LIKE);
         }
-        Like like = likeRepository.save(new Like(currentMemberNumber, commentId, LikeType.COMMENT));
-        // newsFeedService.createActivityForLike(like);
-        // TODO: newsfeed 서비스에도 등록해야함
+
+        Like like = Like.builder()
+                .memberNumber(currentMemberNumber)
+                .likeType(LikeType.COMMENT)
+                .itemId(commentId)
+                .build();
+
+        likeRepository.save(like);
+        createNewsFeedForLike(like, commentId);
     }
 
     @Override
@@ -76,16 +92,16 @@ public class LikeServiceImpl implements LikeService {
     public void unlikeComment(Long commentId, Long currentMemberNumber) {
         userFeignClient.findMemberByNumber(currentMemberNumber);
         findComment(commentId);
-        Optional<Like> likeOpt = likeRepository.findByItemIdAndLikeTypeAndMemberNumber(commentId, LikeType.COMMENT,
+        Optional<Like> likeOptional = likeRepository.findByItemIdAndLikeTypeAndMemberNumber(commentId, LikeType.COMMENT,
                 currentMemberNumber);
 
-        if (likeOpt.isEmpty()) {
+        if (likeOptional.isEmpty()) {
             throw new LikeException(ErrorCode.NOT_LIKE);
         }
-        Like like = likeOpt.get();
+        Like like = likeOptional.get();
         likeRepository.delete(like);
-        // newsFeedService.deleteActivityForUnlike(like);
-        // TODO: newsfeed 서비스에도 등록해야함
+
+        deleteNewsFeedForLike(like);
     }
 
     @Override
@@ -116,5 +132,45 @@ public class LikeServiceImpl implements LikeService {
     private boolean isAlreadyCommentLiked(Long commentId, Long currentMemberNumber) {
         return likeRepository.existsByItemIdAndLikeTypeAndMemberNumber(commentId, LikeType.COMMENT,
                 currentMemberNumber);
+    }
+
+    private void createNewsFeedForLike(Like like, Long targetId) {
+        NewsFeedCreate newsFeedCreate = NewsFeedCreate.builder()
+                .memberNumber(like.getMemberNumber())
+                .newsFeedType("LIKE")
+                .activityId(like.getLikeId())
+                .targetPostId(targetId)
+                .createdAt(like.getCreatedAt())
+                .isDeleted(false)
+                .build();
+
+        newsfeedFeignClient.createNewsFeed(newsFeedCreate);
+    }
+
+    private void deleteNewsFeedForLike(Like like) {
+        Optional<Long> postIdOptional = findRelatedPostIdForLike(like);
+
+        postIdOptional.ifPresent(postId -> {
+            NewsFeedDelete newsFeedDelete = NewsFeedDelete.builder()
+                    .newsFeedType("LIKE")
+                    .activityId(like.getLikeId())
+                    .isDeleted(true)
+                    .build();
+
+            newsfeedFeignClient.deleteNewsFeed(newsFeedDelete);
+        });
+    }
+
+    private Optional<Long> findRelatedPostIdForLike(Like like) {
+        if (like.getLikeType() == LikeType.POST) {
+            return Optional.of(like.getItemId());
+        } else if (like.getLikeType() == LikeType.COMMENT) {
+            return findPostIdFromComment(like.getItemId());
+        }
+        return Optional.empty();
+    }
+
+    private Optional<Long> findPostIdFromComment(Long commentId) {
+        return commentRepository.findPostIdByCommentId(commentId);
     }
 }

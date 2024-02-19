@@ -12,6 +12,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
@@ -22,6 +24,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "Likes")
 @Getter
+@Builder
+@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
 public class Like {
@@ -44,10 +48,4 @@ public class Like {
     @Column(name = "created_at")
     @CreatedDate
     private LocalDateTime createdAt;
-
-    public Like(Long memberNumber, Long itemId, LikeType likeType) {
-        this.memberNumber = memberNumber;
-        this.itemId = itemId;
-        this.likeType = likeType;
-    }
 }

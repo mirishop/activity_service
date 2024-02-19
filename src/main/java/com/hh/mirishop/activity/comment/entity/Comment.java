@@ -1,6 +1,5 @@
 package com.hh.mirishop.activity.comment.entity;
 
-import com.hh.mirishop.activity.comment.infrastructure.CommentEventListener;
 import com.hh.mirishop.activity.post.entity.Post;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,7 +27,7 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners({AuditingEntityListener.class, CommentEventListener.class})
+@EntityListeners(AuditingEntityListener.class)
 public class Comment {
 
     @Id

@@ -3,6 +3,8 @@ package com.hh.mirishop.activity.post.service;
 import com.hh.mirishop.activity.client.NewsfeedFeignClient;
 import com.hh.mirishop.activity.client.UserFeignClient;
 import com.hh.mirishop.activity.client.dto.NewsFeedCreate;
+import com.hh.mirishop.activity.client.dto.NewsFeedDelete;
+import com.hh.mirishop.activity.client.dto.NewsFeedUpdate;
 import com.hh.mirishop.activity.common.exception.ErrorCode;
 import com.hh.mirishop.activity.common.exception.PostException;
 import com.hh.mirishop.activity.like.domain.LikeType;
@@ -39,16 +41,7 @@ public class PostServiceImpl implements PostService {
 
         Long postId = post.getPostId();
 
-        NewsFeedCreate newsfeedCreate = NewsFeedCreate.builder()
-                .memberNumber(currentMemberNumber)
-                .newsfeedType("POST")
-                .activityId(postId)
-                .targetPostId(postId)
-                .createdAt(post.getCreatedAt())
-                .updatedAt(post.getUpdatedAt())
-                .build();
-
-        newsfeedFeignClient.createNewsfeed(newsfeedCreate);
+        createNewsFeedForPost(post, postId);
 
         return postId;
     }
@@ -83,16 +76,7 @@ public class PostServiceImpl implements PostService {
         post.update(postRequest.getTitle(), postRequest.getContent());
         postRepository.save(post);
 
-        NewsFeedCreate newsfeedCreate = NewsFeedCreate.builder()
-                .memberNumber(currentMemberNumber)
-                .newsfeedType("POST")
-                .activityId(postId)
-                .targetPostId(postId)
-                .createdAt(post.getCreatedAt())
-                .updatedAt(post.getUpdatedAt())
-                .build();
-
-        newsfeedFeignClient.createNewsfeed(newsfeedCreate);
+        updateNewsFeedForPost(post);
     }
 
     @Override
@@ -105,6 +89,8 @@ public class PostServiceImpl implements PostService {
 
         post.delete(true);
         postRepository.save(post);
+
+        deleteNewsFeedForPost(post);
     }
 
     @Transactional(readOnly = true)
@@ -114,16 +100,51 @@ public class PostServiceImpl implements PostService {
     }
 
     @Transactional(readOnly = true)
-
     private Integer countLikeForPost(Long postId) {
         return likeRepository.countByItemIdAndLikeType(postId, LikeType.POST);
     }
 
     @Transactional(readOnly = true)
-
     private void checkAuthorizedMember(Long currentMemberNumber, Post post) {
         if (!post.getMemberNumber().equals(currentMemberNumber)) {
             throw new PostException(ErrorCode.UNAUTHORIZED_POST_ACCESS);
         }
     }
+
+    private void createNewsFeedForPost(Post post, Long postId) {
+        NewsFeedCreate newsfeedCreate = NewsFeedCreate.builder()
+                .memberNumber(post.getMemberNumber())
+                .newsFeedType("POST")
+                .activityId(postId)
+                .targetPostId(postId)
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
+                .isDeleted(false)
+                .build();
+
+        newsfeedFeignClient.createNewsFeed(newsfeedCreate);
+    }
+
+
+    private void updateNewsFeedForPost(Post post) {
+        NewsFeedUpdate newsFeedUpdate = NewsFeedUpdate.builder()
+                .newsFeedType("POST")
+                .activityId(post.getPostId())
+                .updatedAt(post.getUpdatedAt())
+                .build();
+
+        newsfeedFeignClient.updateNewsFeed(newsFeedUpdate);
+    }
+
+
+    private void deleteNewsFeedForPost(Post post) {
+        NewsFeedDelete newsFeedDelete = NewsFeedDelete.builder()
+                .newsFeedType("POST")
+                .activityId(post.getPostId())
+                .isDeleted(post.getIsDeleted())
+                .build();
+
+        newsfeedFeignClient.deleteNewsFeed(newsFeedDelete);
+    }
+
 }

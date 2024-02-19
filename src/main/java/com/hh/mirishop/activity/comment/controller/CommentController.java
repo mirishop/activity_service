@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -28,9 +28,9 @@ public class CommentController {
     댓글 작성
     */
     @PostMapping
-    public ResponseEntity<BaseResponse<Void>> createComment(@Valid @RequestBody CommentRequest commentRequest,
-                                                            @PathVariable("postId") Long postId,
-                                                            @RequestParam("member") Long currentMemberNumber) {
+    public ResponseEntity<BaseResponse<URI>> createComment(@Valid @RequestBody CommentRequest commentRequest,
+                                                           @PathVariable("postId") Long postId,
+                                                           @RequestHeader(name = "X-MEMBER-NUMBER") Long currentMemberNumber) {
         Long commentId = commentService.createCommentOrReply(commentRequest, currentMemberNumber, postId);
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -38,7 +38,7 @@ public class CommentController {
                 .buildAndExpand(commentId)
                 .toUri();
 
-        return ResponseEntity.created(location).body(BaseResponse.of("댓글이 생성되었습니다.", true, null));
+        return ResponseEntity.ok(BaseResponse.of("댓글이 생성되었습니다.", true, location));
     }
 
     /*
@@ -46,7 +46,7 @@ public class CommentController {
     */
     @DeleteMapping("/{commentId}")
     public ResponseEntity<BaseResponse<Void>> deleteComment(@PathVariable("commentId") Long commentId,
-                                                            @RequestParam("member") Long currentMemberNumber) {
+                                                            @RequestHeader(name = "X-MEMBER-NUMBER") Long currentMemberNumber) {
         commentService.deleteComment(commentId, currentMemberNumber);
         return ResponseEntity.ok(BaseResponse.of("댓글이 삭제되었습니다.", true, null));
     }
@@ -55,9 +55,9 @@ public class CommentController {
     대댓글 작성
     */
     @PostMapping("/reply")
-    public ResponseEntity<BaseResponse<Void>> createReply(@Valid @RequestBody CommentRequest commentRequest,
-                                                          @PathVariable("postId") Long postId,
-                                                          @RequestParam("member") Long currentMemberNumber) {
+    public ResponseEntity<BaseResponse<URI>> createReply(@Valid @RequestBody CommentRequest commentRequest,
+                                                         @PathVariable("postId") Long postId,
+                                                         @RequestHeader(name = "X-MEMBER-NUMBER") Long currentMemberNumber) {
         Long commentId = commentService.createCommentOrReply(commentRequest, currentMemberNumber, postId);
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -65,6 +65,6 @@ public class CommentController {
                 .buildAndExpand(commentId)
                 .toUri();
 
-        return ResponseEntity.created(location).body(BaseResponse.of("대댓글이 생성되었습니다.", true, null));
+        return ResponseEntity.ok(BaseResponse.of("대댓글이 생성되었습니다.", true, location));
     }
 }

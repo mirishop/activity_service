@@ -1,6 +1,5 @@
 package com.hh.mirishop.activity.post.entity;
 
-import com.hh.mirishop.activity.post.infrastructure.PostEventListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -22,7 +21,7 @@ import java.time.LocalDateTime;
 @Table(name = "Posts")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@EntityListeners({AuditingEntityListener.class, PostEventListener.class})
+@EntityListeners(AuditingEntityListener.class)
 public class Post {
 
     @Id

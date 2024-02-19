@@ -1,6 +1,9 @@
 package com.hh.mirishop.activity.comment.service;
 
+import com.hh.mirishop.activity.client.NewsfeedFeignClient;
 import com.hh.mirishop.activity.client.UserFeignClient;
+import com.hh.mirishop.activity.client.dto.NewsFeedCreate;
+import com.hh.mirishop.activity.client.dto.NewsFeedDelete;
 import com.hh.mirishop.activity.comment.dto.CommentRequest;
 import com.hh.mirishop.activity.comment.entity.Comment;
 import com.hh.mirishop.activity.comment.repository.CommentRepository;
@@ -26,23 +29,16 @@ public class CommentServiceImpl implements CommentService {
     private final CommentRepository commentRepository;
     private final LikeRepository likeRepository;
     private final UserFeignClient userFeignClient;
+    private final NewsfeedFeignClient newsfeedFeignClient;
 
     @Override
     @Transactional
     public Long createCommentOrReply(CommentRequest request, Long memberNumber, Long postId) {
-        Post post = findPostById(postId);
         userFeignClient.findMemberByNumber(memberNumber);
-        Comment parentComment = null;
-        Long parentCommentId = request.getParentCommentId();
+        Post post = findPostById(postId);
 
-        // 부모 댓글이 없으면 null로 포함시키고, 있다면 depth 1만 허용
-        if (parentCommentId != null) {
-            parentComment = findParentCommentById(parentCommentId);
-            // 부모 댓글이 상위 부모를 가지는 경우 에러 처리
-            if (parentComment.getParentComment() != null) {
-                throw new CommentException(ErrorCode.SUBCOMMENT_NOT_ALLOWED);
-            }
-        }
+        // 부모 댓글이 있는지 검증하는 로직
+        Comment parentComment = validateAndGetParentComment(request.getParentCommentId());
 
         Comment comment = Comment.builder()
                 .post(post)
@@ -53,6 +49,8 @@ public class CommentServiceImpl implements CommentService {
                 .build();
 
         commentRepository.save(comment);
+        createNewsFeedForComment(comment);
+
         return comment.getCommentId();
     }
 
@@ -66,44 +64,89 @@ public class CommentServiceImpl implements CommentService {
 
         comment.delete(true);
         commentRepository.save(comment);
+
+        deleteNewsFeedForComment(comment);
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public Long findPostIdByCommentId(Long commentId) {
         return commentRepository.findPostIdByCommentId(commentId)
                 .orElseThrow(() -> new CommentException(ErrorCode.POST_NOT_FOUND));
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<Long> findCommentIdsByMemberNumber(Long memberNumber) {
         return commentRepository.findCommentIdsByMemberNumber(memberNumber);
     }
 
-    @Transactional
+    // 부모 댓글이 있는지 검증하는 로직
+    private Comment validateAndGetParentComment(Long parentCommentId) {
+        if (parentCommentId == null) {
+            return null;
+        }
+
+        Comment parentComment = findParentCommentById(parentCommentId);
+
+        // 대댓글의 대댓글은 불가능(depth를 1로 고정)
+        if (parentComment.getParentComment() != null) {
+            throw new CommentException(ErrorCode.SUBCOMMENT_NOT_ALLOWED);
+        }
+        return parentComment;
+    }
+
+    @Transactional(readOnly = true)
     public Integer countLikeForComment(Long commentId) {
         return likeRepository.countByItemIdAndLikeType(commentId, LikeType.COMMENT);
     }
 
+    @Transactional(readOnly = true)
     private Post findPostById(Long postId) {
         return postRepository.findById(postId)
                 .orElseThrow(() -> new PostException(ErrorCode.POST_NOT_FOUND));
     }
 
+    @Transactional(readOnly = true)
     private Comment findParentCommentById(Long parentCommentId) {
         return commentRepository.findById(parentCommentId)
                 .orElseThrow(() -> new CommentException(ErrorCode.PARENT_COMMENT_NOT_FOUND));
     }
 
+    @Transactional(readOnly = true)
     private Comment findCommentById(Long commentId) {
         return commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentException(ErrorCode.COMMENT_NOT_FOUND));
     }
 
+    @Transactional(readOnly = true)
     private void checkAuthorizedMember(Long currentMemberNumber, Comment comment) {
         if (!comment.getMemberNumber().equals(currentMemberNumber)) {
             throw new CommentException(ErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
         }
+    }
+
+    private void createNewsFeedForComment(Comment comment) {
+        NewsFeedCreate newsFeedCreate = NewsFeedCreate.builder()
+                .memberNumber(comment.getMemberNumber())
+                .newsFeedType("COMMENT")
+                .activityId(comment.getCommentId())
+                .targetPostId(comment.getPost().getPostId())
+                .createdAt(comment.getCreatedAt())
+                .isDeleted(false)
+                .build();
+
+        newsfeedFeignClient.createNewsFeed(newsFeedCreate);
+    }
+
+
+    private void deleteNewsFeedForComment(Comment comment) {
+        NewsFeedDelete newsFeedDelete = NewsFeedDelete.builder()
+                .newsFeedType("COMMENT")
+                .activityId(comment.getCommentId())
+                .isDeleted(comment.getIsDeleted())
+                .build();
+
+        newsfeedFeignClient.deleteNewsFeed(newsFeedDelete);
     }
 }
