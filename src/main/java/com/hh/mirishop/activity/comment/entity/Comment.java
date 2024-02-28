@@ -39,7 +39,7 @@ public class Comment {
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
 
-    @JoinColumn(name = "member_number", nullable = false)
+    @Column(name = "member_number", nullable = false)
     private Long memberNumber;
 
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
@@ -56,7 +56,6 @@ public class Comment {
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted;
 
-    // 게시글 삭제(soft delete방식)
     public void delete(boolean isDeleted) {
         this.isDeleted = isDeleted;
     }

@@ -24,9 +24,10 @@ public class CommentController {
 
     private final CommentService commentService;
 
-    /*
-    댓글 작성
-    */
+    /**
+     * postId과 댓글 내용을 입력 받아서 댓글을 생성합니다.
+     * URI를 반환하여 프론트로 전달합니다.
+     */
     @PostMapping
     public ResponseEntity<BaseResponse<URI>> createComment(@Valid @RequestBody CommentRequest commentRequest,
                                                            @PathVariable("postId") Long postId,
@@ -41,9 +42,9 @@ public class CommentController {
         return ResponseEntity.ok(BaseResponse.of("댓글이 생성되었습니다.", true, location));
     }
 
-    /*
-    댓글 삭제(대댓글도 가능)
-    */
+    /**
+     * commentId를 받아서 댓글을 삭제합니다.(대댓글도 가능)
+     */
     @DeleteMapping("/{commentId}")
     public ResponseEntity<BaseResponse<Void>> deleteComment(@PathVariable("commentId") Long commentId,
                                                             @RequestHeader(name = "X-MEMBER-NUMBER") Long currentMemberNumber) {
@@ -51,9 +52,9 @@ public class CommentController {
         return ResponseEntity.ok(BaseResponse.of("댓글이 삭제되었습니다.", true, null));
     }
 
-    /*
-    대댓글 작성
-    */
+    /**
+     * 댓글 내용을 받아서 대댓글을 생성합니다.
+     */
     @PostMapping("/reply")
     public ResponseEntity<BaseResponse<URI>> createReply(@Valid @RequestBody CommentRequest commentRequest,
                                                          @PathVariable("postId") Long postId,

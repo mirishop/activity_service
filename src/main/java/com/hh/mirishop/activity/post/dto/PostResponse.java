@@ -6,7 +6,6 @@ import lombok.Getter;
 
 import java.time.LocalDateTime;
 
-
 @Getter
 @AllArgsConstructor
 public class PostResponse {

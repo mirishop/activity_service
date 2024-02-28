@@ -9,7 +9,6 @@ import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -35,7 +34,7 @@ public class Like {
     @Column(name = "like_id")
     private Long likeId;
 
-    @JoinColumn(name = "member_number")
+    @Column(name = "member_number")
     private Long memberNumber;
 
     @Column(name = "item_id")

@@ -55,14 +55,18 @@ public class Post {
         this.memberNumber = memberNumber;
     }
 
-    // 게시글 수정
+    /**
+     * 제목과 내용을 받아서 글을 업데이트하는 메소드
+     */
     public void update(String title, String content) {
         this.title = title;
         this.content = content;
         this.updatedAt = LocalDateTime.now();
     }
 
-    // 게시글 삭제(soft delete방식)
+    /**
+     * 글 소프트 삭제 메소드
+     */
     public void delete(boolean isDeleted) {
         this.isDeleted = isDeleted;
     }

@@ -10,7 +10,6 @@ import com.hh.mirishop.activity.comment.repository.CommentRepository;
 import com.hh.mirishop.activity.common.exception.CommentException;
 import com.hh.mirishop.activity.common.exception.ErrorCode;
 import com.hh.mirishop.activity.common.exception.PostException;
-import com.hh.mirishop.activity.like.domain.LikeType;
 import com.hh.mirishop.activity.like.repository.LikeRepository;
 import com.hh.mirishop.activity.post.entity.Post;
 import com.hh.mirishop.activity.post.repository.PostRepository;
@@ -19,7 +18,7 @@ import org.hibernate.annotations.SoftDelete;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +30,10 @@ public class CommentServiceImpl implements CommentService {
     private final UserFeignClient userFeignClient;
     private final NewsfeedFeignClient newsfeedFeignClient;
 
+    /**
+     * 유저 검증 후 댓글을 작성하는 메소드
+     * 부모 댓글이 없으면 일반 댓글, 있으면 대댓글 생성
+     */
     @Override
     @Transactional
     public Long createCommentOrReply(CommentRequest request, Long memberNumber, Long postId) {
@@ -54,6 +57,9 @@ public class CommentServiceImpl implements CommentService {
         return comment.getCommentId();
     }
 
+    /**
+     * 댓글을 검증 후 유저가 단 댓글 확인, 이후 댓글을 삭제하는 메소드
+     */
     @Override
     @SoftDelete
     @Transactional
@@ -68,20 +74,6 @@ public class CommentServiceImpl implements CommentService {
         deleteNewsFeedForComment(comment);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Long findPostIdByCommentId(Long commentId) {
-        return commentRepository.findPostIdByCommentId(commentId)
-                .orElseThrow(() -> new CommentException(ErrorCode.POST_NOT_FOUND));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<Long> findCommentIdsByMemberNumber(Long memberNumber) {
-        return commentRepository.findCommentIdsByMemberNumber(memberNumber);
-    }
-
-    // 부모 댓글이 있는지 검증하는 로직
     private Comment validateAndGetParentComment(Long parentCommentId) {
         if (parentCommentId == null) {
             return null;
@@ -96,32 +88,23 @@ public class CommentServiceImpl implements CommentService {
         return parentComment;
     }
 
-    @Transactional(readOnly = true)
-    public Integer countLikeForComment(Long commentId) {
-        return likeRepository.countByItemIdAndLikeType(commentId, LikeType.COMMENT);
-    }
-
-    @Transactional(readOnly = true)
     private Post findPostById(Long postId) {
         return postRepository.findById(postId)
                 .orElseThrow(() -> new PostException(ErrorCode.POST_NOT_FOUND));
     }
 
-    @Transactional(readOnly = true)
     private Comment findParentCommentById(Long parentCommentId) {
         return commentRepository.findById(parentCommentId)
                 .orElseThrow(() -> new CommentException(ErrorCode.PARENT_COMMENT_NOT_FOUND));
     }
 
-    @Transactional(readOnly = true)
     private Comment findCommentById(Long commentId) {
         return commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentException(ErrorCode.COMMENT_NOT_FOUND));
     }
 
-    @Transactional(readOnly = true)
     private void checkAuthorizedMember(Long currentMemberNumber, Comment comment) {
-        if (!comment.getMemberNumber().equals(currentMemberNumber)) {
+        if (!Objects.equals(comment.getMemberNumber(), currentMemberNumber)) {
             throw new CommentException(ErrorCode.UNAUTHORIZED_COMMENT_ACCESS);
         }
     }

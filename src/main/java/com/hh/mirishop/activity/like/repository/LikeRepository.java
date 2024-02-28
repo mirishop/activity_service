@@ -17,7 +17,6 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
     @Query("SELECT COUNT(l) FROM Like l WHERE l.itemId = :itemId AND l.likeType = :likeType")
     Integer countByItemIdAndLikeType(@Param("itemId") Long itemId, @Param("likeType") LikeType likeType);
 
-
     // itemId(post 또는 comment)에서 member가 좋아요를 했는지 확인하는 메소드
     boolean existsByItemIdAndLikeTypeAndMemberNumber(Long itemId, LikeType likeType, Long memberNumber);
 

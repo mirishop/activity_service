@@ -21,7 +21,7 @@ public class ExceptionManager extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(CommentException.class)
-    protected ResponseEntity<?> handleLCommentException(CommentException e) {
+    protected ResponseEntity<?> handleCommentException(CommentException e) {
         ErrorCode errorCode = e.getErrorCode();
         return handleExceptionInternal(errorCode);
     }

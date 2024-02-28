@@ -10,5 +10,6 @@ public class CommentRequest {
 
     @Size(min = 1, max = 400, message = "400자 이하로 입력해주세요.")
     private String content;
+
     private Long parentCommentId;
 }

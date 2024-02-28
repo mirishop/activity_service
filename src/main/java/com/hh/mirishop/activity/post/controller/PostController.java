@@ -29,9 +29,9 @@ public class PostController {
 
     private final PostService postService;
 
-    /*
-    게시글 작성
-    */
+    /**
+     * 글 내용 정보를 받아서 글을 생성합니다.
+     */
     @PostMapping
     public ResponseEntity<BaseResponse<Void>> createPost(@Valid @RequestBody PostRequest postRequest,
                                                          @RequestHeader(name = "X-MEMBER-NUMBER") Long currentMemberNumber) {
@@ -45,9 +45,9 @@ public class PostController {
         return ResponseEntity.created(location).body(BaseResponse.of("게시글이 생성되었습니다.", true, null));
     }
 
-    /*
-    본인이 작성한 게시글 보는 메소드
-    */
+    /**
+     * 유저가 작성한 본인의 모든 글을 볼 수 있습니다.
+     */
     @GetMapping
     public ResponseEntity<BaseResponse<Page<PostResponse>>> getAllPosts(@RequestParam("page") int page,
                                                                         @RequestParam("size") int size,
@@ -57,22 +57,19 @@ public class PostController {
         return ResponseEntity.ok(BaseResponse.of("게시글 목록 조회 성공", true, postList));
     }
 
-    /*
-    게시글 한개 보기
-    */
+    /**
+     * 작성한 게시글 하나를 볼 수 있습니다.
+     * postResponse로 게시글의 모든 정보를 전달합니다.
+     */
     @GetMapping("/{postId}")
     public ResponseEntity<BaseResponse<PostResponse>> getPost(@PathVariable Long postId){
         PostResponse postResponse = postService.getPost(postId);
         return ResponseEntity.ok(BaseResponse.of("게시글 내용 조회 성공", true, postResponse));
     }
 
-    /*
-    Todo : 비회원이 게시글 모음을 볼지, 뉴스피드를 볼지 고민해야함.
-    */
-
-    /*
-    게시글 수정
-    */
+    /**
+     * postId와 게시글 내용을 받아서 글을 수정합니다.
+     */
     @PutMapping("/{postId}")
     public ResponseEntity<BaseResponse<Void>> updatePost(@PathVariable("postId") Long postId,
                                                          @RequestBody PostRequest postRequest,
@@ -81,9 +78,9 @@ public class PostController {
         return ResponseEntity.ok(BaseResponse.of("게시글이 업데이트되었습니다.", true, null));
     }
 
-    /*
-    게시글 삭제
-    */
+    /**
+     * postId를 받아서 게시글을 삭제합니다.
+     */
     @DeleteMapping("/{postId}")
     public ResponseEntity<BaseResponse<Void>> deletePost(@PathVariable("postId") Long postId,
                                                          @RequestHeader(name = "X-MEMBER-NUMBER") Long currentMemberNumber) {

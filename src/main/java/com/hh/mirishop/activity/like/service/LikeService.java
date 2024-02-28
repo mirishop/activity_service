@@ -9,6 +9,4 @@ public interface LikeService {
     void likeComment(Long commentId, Long currentMemberNumber);
 
     void unlikeComment(Long commentId, Long currentMemberNumber);
-
-    Long findPostIdByCommentId(Long commentId);
 }

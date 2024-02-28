@@ -29,6 +29,9 @@ public class LikeServiceImpl implements LikeService {
     private final UserFeignClient userFeignClient;
     private final NewsfeedFeignClient newsfeedFeignClient;
 
+    /**
+     * 유저 검증 후 postId를 받아서 좋아요를 생성하는 메소드
+     */
     @Override
     @Transactional
     public void likePost(Long postId, Long currentMemberNumber) {
@@ -49,6 +52,9 @@ public class LikeServiceImpl implements LikeService {
         createNewsFeedForLike(like, postId);
     }
 
+    /**
+     * 유저 검증 후 postId를 받아서 좋아요를 삭제하는 메소드
+     */
     @Override
     @Transactional
     public void unlikePost(Long postId, Long currentMemberNumber) {
@@ -67,6 +73,9 @@ public class LikeServiceImpl implements LikeService {
         deleteNewsFeedForLike(like);
     }
 
+    /**
+     * 유저 검증 후 commentId를 받아서 좋아요를 생성하는 메소드
+     */
     @Override
     @Transactional
     public void likeComment(Long commentId, Long currentMemberNumber) {
@@ -87,6 +96,9 @@ public class LikeServiceImpl implements LikeService {
         createNewsFeedForLike(like, commentId);
     }
 
+    /**
+     * 유저 검증 후 commentId를 받아서 좋아요를 삭제하는 메소드
+     */
     @Override
     @Transactional
     public void unlikeComment(Long commentId, Long currentMemberNumber) {
@@ -104,31 +116,20 @@ public class LikeServiceImpl implements LikeService {
         deleteNewsFeedForLike(like);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Long findPostIdByCommentId(Long commentId) {
-        return commentRepository.findPostIdByCommentId(commentId)
-                .orElseThrow(() -> new PostException(ErrorCode.POST_NOT_FOUND));
-    }
-
-    @Transactional(readOnly = true)
     private void findPost(Long postId) {
         postRepository.findById(postId)
                 .orElseThrow(() -> new PostException(ErrorCode.POST_NOT_FOUND));
     }
 
-    @Transactional(readOnly = true)
     private boolean isAlreadyPostLiked(Long postId, Long currentMemberNumber) {
         return likeRepository.existsByItemIdAndLikeTypeAndMemberNumber(postId, LikeType.POST, currentMemberNumber);
     }
 
-    @Transactional(readOnly = true)
     private void findComment(Long commentId) {
         commentRepository.findById(commentId)
                 .orElseThrow(() -> new CommentException(ErrorCode.COMMENT_NOT_FOUND));
     }
 
-    @Transactional(readOnly = true)
     private boolean isAlreadyCommentLiked(Long commentId, Long currentMemberNumber) {
         return likeRepository.existsByItemIdAndLikeTypeAndMemberNumber(commentId, LikeType.COMMENT,
                 currentMemberNumber);

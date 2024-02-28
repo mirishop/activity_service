@@ -31,6 +31,9 @@ public class PostServiceImpl implements PostService {
     private final UserFeignClient userFeignClient;
     private final NewsfeedFeignClient newsfeedFeignClient;
 
+    /**
+     * 유저 검증 후, 글을 생성하는 메소드
+     */
     @Override
     @Transactional
     public Long createPost(PostRequest postRequest, Long currentMemberNumber) {
@@ -40,12 +43,14 @@ public class PostServiceImpl implements PostService {
         postRepository.save(post);
 
         Long postId = post.getPostId();
-
         createNewsFeedForPost(post, postId);
 
         return postId;
     }
 
+    /**
+     * 유저 검증후 유저의 모든글을 보여주는 메소드
+     */
     @Override
     @Transactional(readOnly = true)
     public Page<PostResponse> getAllpostsByMember(int page, int size, Long currentMemberNumber) {
@@ -58,6 +63,9 @@ public class PostServiceImpl implements PostService {
         });
     }
 
+    /**
+     * postId로 글을 조회하여, 좋아요 정보와 함께 전달하는 메소드
+     */
     @Override
     @Transactional(readOnly = true)
     public PostResponse getPost(Long postId) {
@@ -66,6 +74,10 @@ public class PostServiceImpl implements PostService {
         return new PostResponse(post, countPostLikes);
     }
 
+    /**
+     * postId와 글 내용을 받아서 글을 업데이트하는 메소드
+     * 유저 검증이 들어감
+     */
     @Override
     @Transactional
     public void updatePost(Long postId, PostRequest postRequest, Long currentMemberNumber) {
@@ -79,6 +91,9 @@ public class PostServiceImpl implements PostService {
         updateNewsFeedForPost(post);
     }
 
+    /**
+     * postId로 글 검색후 유저를 검증하여 글을 삭제하는 메소드
+     */
     @Override
     @SoftDelete
     @Transactional
@@ -93,18 +108,15 @@ public class PostServiceImpl implements PostService {
         deleteNewsFeedForPost(post);
     }
 
-    @Transactional(readOnly = true)
     private Post findPostById(Long postId) {
         return postRepository.findByPostIdAndIsDeletedFalse(postId)
                 .orElseThrow(() -> new PostException(ErrorCode.POST_NOT_FOUND));
     }
 
-    @Transactional(readOnly = true)
     private Integer countLikeForPost(Long postId) {
         return likeRepository.countByItemIdAndLikeType(postId, LikeType.POST);
     }
 
-    @Transactional(readOnly = true)
     private void checkAuthorizedMember(Long currentMemberNumber, Post post) {
         if (!post.getMemberNumber().equals(currentMemberNumber)) {
             throw new PostException(ErrorCode.UNAUTHORIZED_POST_ACCESS);
@@ -125,7 +137,6 @@ public class PostServiceImpl implements PostService {
         newsfeedFeignClient.createNewsFeed(newsfeedCreate);
     }
 
-
     private void updateNewsFeedForPost(Post post) {
         NewsFeedUpdate newsFeedUpdate = NewsFeedUpdate.builder()
                 .newsFeedType("POST")
@@ -135,7 +146,6 @@ public class PostServiceImpl implements PostService {
 
         newsfeedFeignClient.updateNewsFeed(newsFeedUpdate);
     }
-
 
     private void deleteNewsFeedForPost(Post post) {
         NewsFeedDelete newsFeedDelete = NewsFeedDelete.builder()
